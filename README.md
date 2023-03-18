@@ -15,5 +15,5 @@ $ python3 train.py -h
 We calculate the alpha (negative region co-efficient in leaky relu) gradients using the technique Prof. Mitesh used for maxout neuron. The gradient is calculated for every neuron in the current layer and an indicator function is used to mask out only those neurons in the negative activation region for that should be updated during backprop. Value clipping is also done for alpha so that it does not become too large or too small.
 
 Running
-$ grep * "alpha"
+$ grep "alpha" * 
 in the folder will reveal the changes made to the original framwork to support this functionality.
