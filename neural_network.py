@@ -114,7 +114,7 @@ class NeuralNetwork:
             gradients_act_values = np.multiply(loss_grad_outputs, outderivs[idx])
             weight_gradients[idx]  = np.einsum('ac,bc->abc', gradients_act_values, outvalues[idx-1])
             bias_gradients[idx] = np.copy(gradients_act_values)
-            if self.hidden_actfn == get_act_func_and_deriv('leakyrelu'):
+            if self.hidden_actfn[idx] == get_act_func_and_deriv('leakyrelu'):
                 ind = np.where(outvalues[idx]>0,0,1)
                 alpha_gradients[idx] = ind * actvalues[idx]
         
@@ -155,6 +155,11 @@ class NeuralNetwork:
         print(f'{tname} accuracy = {tacc}; {tname} loss = {tloss}')
         return tacc, tloss
 
+    def shuffle_train(self, train_batches):
+        X, y = train_batches
+        perm = self.shf_rg.permutation(len(X))
+        return [X[p] for p in perm], [y[p] for p in perm]
+
     # function to train the neural network using train_data and perform validation
     # (for hyperparameter fine-tuning) using val_data
     def train(self, train_data, val_data, epochs, batchsize, learning_rate, silent=True, log_wandb=False):
@@ -163,11 +168,13 @@ class NeuralNetwork:
         (val_X, val_y) = val_data
         train_batches = self.make_batches(train_X, train_y, batchsize)
         val_batches = self.make_batches(val_X, val_y, batchsize)
+        self.shf_rg = np.random.RandomState(42) # random state for determinism when shuffling train batches
 
         weights, biases, leakyalphas = self.init_parameters()
         for e in range(epochs):
             # forward and backward over all data (1 epoch)
             counter = 0 # for non-silent mode; we will calculate val loss and val acc every 100 train batches; this will be printed
+            train_batches = self.shuffle_train(train_batches) # shuffle train batches
             for X, y in tqdm(zip(train_batches[0], train_batches[1]), total=len(train_batches[0])):
                 counter += 1
                 batch_weight_gradient, batch_bias_gradient, batch_alpha_gradient = [None for i in range(self.hlayercount+2)], [None for i in range(self.hlayercount+2)], [None for i in range(self.hlayercount+2)]
@@ -178,16 +185,20 @@ class NeuralNetwork:
                 for idx in range(1, self.hlayercount+2):
                     batch_bias_gradient[idx] = np.sum(bias_gradients[idx], axis=-1)
                     batch_weight_gradient[idx] = np.sum(weight_gradients[idx], axis=-1)
-                    if (self.hidden_actfn == get_act_func_and_deriv('leakyrelu')):
+                    if (idx < self.hlayercount + 1 and self.hidden_actfn[idx] == get_act_func_and_deriv('leakyrelu')):
                         batch_alpha_gradient[idx] = np.sum(alpha_gradients[idx], axis=-1)
-                        leakyalphas[idx] -= (1e-4) * batch_alpha_gradient[idx]
-                        leakyalphas[idx] = np.where(leakyalphas[idx] > 1000 or leakyalphas[idx] < -1000, np.sign(leakyalphas[idx]) * 1000,leakyalphas[idx]) 
+                        # a very low learning rate for alpha is used. sgd update is followed.
+                        leakyalphas[idx] -= (5*1e-6) * batch_alpha_gradient[idx]
+                        temp = leakyalphas[idx]
+                        # clipping alphas to preserve leaky behaviour.
+                        temp = np.where(temp>0.5, 0.5, temp) 
+                        temp = np.where(temp<0.001, 0.001, temp)
+                        leakyalphas[idx] = temp
                                         
                     # L2 regularization -> one update for every optimizer step
                     batch_bias_gradient[idx] += self.weight_decay * biases[idx]
                     batch_weight_gradient[idx] += self.weight_decay * weights[idx]
 
-                
                 # make log and test after every epoch
                 self.optimizer.update_parameters(weights, biases, learning_rate, batch_weight_gradient, batch_bias_gradient)
                 if (not silent and counter == 100):
