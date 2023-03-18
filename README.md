@@ -11,3 +11,5 @@ to train and test the network for the default values for the hyperparameters (he
 Other values for the remaining hyperparameters may be given using the argparse help available from 
 
 $ python3 train.py -h
+
+We calculate the alpha (negative region co-efficient in leaky relu) gradients using the technique Prof. Mitesh used for maxout neuron. The gradient is calculated from every neuron in the current layer and an indicator function is used to mask out only those neurons in the negative activation region for that should be updated during backprop.
