@@ -33,7 +33,7 @@ def gen_parser():
     parser.add_argument('-sz', '--hidden_size', dest='hidden_size', default=128, type=int, help='Number of hidden neurons in a feedforward layer')
     parser.add_argument('-a', '--activation', dest='activation_function', default='leakyrelu', choices=['identity', 'sigmoid', 'tanh', 'relu', 'leakyrelu', 'elu'], help='Activation function to be used')
     parser.add_argument('-uw', '--log_wandb', dest='log_wandb', type=int, default=0, help='non-zero for wandb logging')
-    parser.add_argument('-rn', '--run_name', dest='run_name', default=None, help='non-zero for wandb sweeping and logging')
+    parser.add_argument('-rn', '--run_name', dest='run_name', default=None, help='optional run name for wandb logging')
     return parser
 
 # direct zero-one normalization by dividing by 255. 
