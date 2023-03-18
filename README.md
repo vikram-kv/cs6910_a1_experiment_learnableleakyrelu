@@ -2,4 +2,8 @@
 
 Addendum to cs6910 assignment 1. Here, the alpha (negative region co-efficient) has been made learnable. Other than that, the usage instruction remains the same.
 
-To use
+To use the learnable leaky-relu, run 
+
+$ python3 train.py 
+
+to train and test the network for the default values for the hyperparameters (here, default activation function is relu).
